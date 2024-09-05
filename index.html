@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投降書生成器</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            margin: auto;
+            margin-bottom: 20px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 15px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #canvas {
+            display: block;
+            margin: 20px auto;
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        #downloadBtn {
+            display: block;
+            margin: 20px auto;
+        }
+        .template-options {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .template-option {
+            cursor: pointer;
+            margin: 10px;
+            border: 2px solid transparent;
+            transition: border-color 0.3s;
+        }
+        .template-option:hover, .template-option.selected {
+            border-color: #3498db;
+        }
+        .template-option img {
+            width: 150px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>&#129306 投降書生成器 &#129306</h1>
+        <form id="imageForm">
+            <label for="name">投降人:</label>
+            <input type="text" id="name" required>
+
+            <label>投降書背景:</label>
+            <div class="template-options">
+                <div class="template-option" data-template="birthday">
+                    <img src="templates/1.jpg" alt="清德宗">
+                </div>
+                <div class="template-option" data-template="greeting">
+                    <img src="templates/2.jpg" alt="清德宗2">
+                </div>
+                <div class="template-option" data-template="invitation">
+                    <img src="templates/3.jpg" alt="民進黨">
+                </div>
+            </div>
+
+            <button type="submit">立即投降</button>
+        </form>
+
+        <canvas id="canvas" width="600" height="400"></canvas>
+        <button id="downloadBtn" style="display:none;">下載投降書</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const form = document.getElementById('imageForm');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const templateOptions = document.querySelectorAll('.template-option');
+        let selectedTemplate = null;
+
+        const surrender_template = (name) => "我爱赖清德，我爱党\n" +
+            "<投降书>\n" +
+            "本人${name}从未在互联网上侮辱过民进党，\n本人${name}虽然身为二次元的肥宅，\n但是实际上经常研究台湾价值，\n经过长时间的关注，\n我发现台湾价值才是真正的第一社会制度。\n对于现如今发生的一切事情，\n我深感抱歉，并非常愧疚。\n我在此发誓，从此不再与二次元色图有任何联系，\n本人${name}特写此书以表愧意，\n临表涕零，不知所言。"
+
+        const templates = {
+            birthday: {
+                image: 'templates/1.jpg',
+                text: surrender_template,
+                textPosition: { x: 300, y: 40 },
+                textColor: 'lightgreen',
+            },
+            greeting: {
+                image: 'templates/2.jpg',
+                text: surrender_template,
+                textPosition: { x: 300, y: 40 },
+                textColor: 'lightgreen',
+            },
+            invitation: {
+                image: 'templates/3.jpg',
+                text: surrender_template,
+                textPosition: { x: 300, y: 40 },
+                textColor: 'white',
+            }
+        };
+
+
+        templateOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                templateOptions.forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                selectedTemplate = option.dataset.template;
+            });
+        });
+
+        function wrapTextByNewline(ctx, text, x, y, maxWidth, lineHeight) {
+            const lines = text.split('\n');
+            lines.forEach(line => {
+                let currentLine = '';
+                const words = line.split(' ');
+
+                for (let i = 0; i < words.length; i++) {
+                    const testLine = currentLine + words[i] + ' ';
+                    const metrics = ctx.measureText(testLine);
+                    const testWidth = metrics.width;
+
+                    if (testWidth > maxWidth && i > 0) {
+                        ctx.fillText(currentLine, x, y);
+                        currentLine = words[i] + ' ';
+                        y += lineHeight;
+                    } else {
+                        currentLine = testLine;
+                    }
+                }
+                ctx.fillText(currentLine, x, y);
+                y += lineHeight;
+            });
+        }
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!selectedTemplate) {
+                alert('請選擇一個背景模板');
+                return;
+            }
+            const name = document.getElementById('name').value;
+            const template = templates[selectedTemplate];
+
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.src = template.image;
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                ctx.font = 'bold 25px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                const text = template.text(name).replace(/\${name}/g, name);
+                const maxWidth = canvas.width - 40;
+                const lineHeight = 30;
+
+                ctx.fillStyle = template.textColor;
+                wrapTextByNewline(ctx, text, template.textPosition.x, template.textPosition.y, maxWidth, lineHeight);
+
+                downloadBtn.style.display = 'block';
+            };
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            const dataUrl = canvas.toDataURL('image/jpg');
+            const link = document.createElement('a');
+            link.download = '投降.jpg';
+            link.href = dataUrl;
+            link.click();
+        });
+    </script>
+</body>
+</html>
